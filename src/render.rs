@@ -943,6 +943,12 @@ mod tests {
     }
 
     #[test]
+    fn test_render_concat_multiple() {
+        let result = render_template("{{ \"abc\" ~ \"def\" ~ \"ghi\" }}", Context::new());
+        assert_eq!(result.unwrap(), "abcdefghi".to_owned());
+    }
+
+    #[test]
     fn test_render_concat_variables() {
         let mut context = Context::new();
         context.add("section", &"documentation");
@@ -950,6 +956,18 @@ mod tests {
         let result = render_template("{{ section ~ index }}", context);
 
         assert_eq!(result.unwrap(), "documentation/_index.md".to_owned());
+    }
+
+    #[test]
+    fn test_render_concat_non_strings() {
+        let mut context = Context::new();
+        let mut map = BTreeMap::new();
+        map.insert("k1", "v1");
+        context.add("obj", &map);
+        context.add("array", &vec![1, 2, 3]);
+        let result = render_template("{{ true ~ 100 ~ obj ~ array }}", context);
+
+        assert_eq!(result.unwrap(), "true100[object][1, 2, 3, ]".to_owned());
     }
 
     #[test]

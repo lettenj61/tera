@@ -32,6 +32,8 @@ pub enum Operator {
     And,
     /// or
     Or,
+    /// ~
+    Tilde,
 }
 
 impl fmt::Display for Operator {
@@ -51,6 +53,8 @@ impl fmt::Display for Operator {
 
             Operator::And => "and",
             Operator::Or => "or",
+
+            Operator::Tilde => "~",
         })
     }
 }
@@ -90,6 +94,16 @@ pub enum Node {
     },
     /// Negated node
     Not(Box<Node>),
+
+    /// String concatenation node
+    Concat {
+        /// Left side of the operation
+        lhs: Box<Node>,
+        /// Right side of the operation
+        rhs: Box<Node>,
+        /// Operator used (~)
+        operator: Operator
+    },
 
     /// Contains initial if block, all elif blocks and optional else block
     /// The condition nodes are a list of `Conditional` node
@@ -242,6 +256,7 @@ impl_rdp! {
         op_minus     = { ["-"] }
         op_times     = { ["*"] }
         op_slash     = { ["/"] }
+        op_tilde     = { ["~"] }
         op_true      = { ["true"] }
         op_false     = { ["false"] }
         boolean      = _{ op_true | op_false }
@@ -303,6 +318,7 @@ impl_rdp! {
             comparison  = { op_lte | op_gte | op_gt | op_lt | op_eq | op_ineq }
             add_sub     = { op_plus | op_minus }
             mul_div     = { op_times | op_slash }
+            concat      = { op_tilde }
         }
 
         logic_expression = _{
@@ -817,6 +833,13 @@ impl_rdp! {
                     operator: Operator::Or,
                 })
             },
+            (_: concat, left: _expression(), _, right: _expression()) => {
+                Ok(Node::Concat {
+                    lhs: Box::new(left?),
+                    rhs: Box::new(right?),
+                    operator: Operator::Tilde,
+                })
+            },
             (_: identifier_with_filter, &ident: identifier, tail: _filters()) => {
                 Ok(Node::Identifier {
                     name: ident.to_string(),
@@ -934,6 +957,13 @@ mod tests {
     fn test_string() {
         let mut parser = Rdp::new(StringInput::new("\"Blabla\""));
         assert!(parser.string());
+        assert!(parser.end());
+    }
+
+    #[test]
+    fn test_string_concat() {
+        let mut parser = Rdp::new(StringInput::new("\"A\" ~ \"B\""));
+        assert!(parser.expression());
         assert!(parser.end());
     }
 

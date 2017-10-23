@@ -318,6 +318,20 @@ impl<'a> Renderer<'a> {
         }
     }
 
+    fn eval_string_concat(&mut self, node: &Node) -> Result<String> {
+        match *node {
+            Concat { ref lhs, ref rhs, .. } => {
+                let l = self.eval_expression(lhs)?;
+                let r = self.eval_expression(rhs)?;
+
+                let mut ls = l.render();
+                ls.push_str(&r.render());
+                Ok(ls)
+            },
+            _ => unreachable!()
+        }
+    }
+
     fn eval_global_fn(&mut self, node: &Node) -> Result<Value> {
         match node {
             &GlobalFunctionCall { ref name, ref params } => {
@@ -366,6 +380,10 @@ impl<'a> Renderer<'a> {
                 Ok(Value::String(t.to_string()))
             },
             &GlobalFunctionCall { .. } => self.eval_global_fn(node),
+            &Concat { .. } => {
+                let result = self.eval_string_concat(node)?;
+                Ok(Value::String(result))
+            }
             _ => unreachable!()
         }
     }
@@ -474,6 +492,7 @@ impl<'a> Renderer<'a> {
             &Identifier { .. } => Ok(self.eval_ident(node)?.render()),
             &Math { .. } => Ok(self.eval_math(node)?.to_string()),
             &Text(ref s) => Ok(s.to_string()),
+            &Concat { .. } => Ok(self.eval_string_concat(node)?),
             _ => unreachable!("found node {:?}", node)
         }
     }
@@ -915,6 +934,22 @@ mod tests {
         let result = render_template("My name {# was {{ name }} #} is No One.", context);
 
         assert_eq!(result.unwrap(), "My name  is No One.".to_owned());
+    }
+
+    #[test]
+    fn test_render_concat_literal() {
+        let result = render_template("{{ \"Hello\" ~ \" world!\" }}", Context::new());
+        assert_eq!(result.unwrap(), "Hello world!".to_owned());
+    }
+
+    #[test]
+    fn test_render_concat_variables() {
+        let mut context = Context::new();
+        context.add("section", &"documentation");
+        context.add("index", &"/_index.md");
+        let result = render_template("{{ section ~ index }}", context);
+
+        assert_eq!(result.unwrap(), "documentation/_index.md".to_owned());
     }
 
     #[test]

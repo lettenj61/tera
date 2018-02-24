@@ -104,6 +104,12 @@ pub struct LogicExpr {
     pub operator: LogicOperator,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct StringConcat {
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>
+}
+
 /// An expression is the node found in variable block, kwargs and conditions.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExprVal {
@@ -117,6 +123,7 @@ pub enum ExprVal {
     Test(Test),
     MacroCall(MacroCall),
     FunctionCall(FunctionCall),
+    StringConcat(StringConcat),
 }
 
 #[derive(Clone, Debug, PartialEq)]
